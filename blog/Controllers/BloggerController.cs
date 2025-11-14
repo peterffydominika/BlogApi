@@ -54,6 +54,29 @@ namespace blog.Controllers
             }
 
         }
+        [HttpGet("byId")]
+        public ActionResult<Blog> GetRecordById(int id)
+        {
+            using (var context = new BlogDbContext())
+            {
+                var blogId = context.blog.FirstOrDefault(blog => blog.Id == id);
+
+                if (blogId != null)
+                {
+                    return Ok(new
+                    {
+                        message = "Sikeres lekérdezés",
+                        result = blogId
+                    });
+                }
+
+                return NotFound(new
+                {
+                    meassage = "Nincs ilyen id!"
+                });
+            }
+
+        }
         [HttpPut]
         public ActionResult PutRecord(int id, UpdateBlogDto updateBlogDto)
         {
@@ -103,6 +126,70 @@ namespace blog.Controllers
                 return NotFound(new
                 {
                     meassage = "Nincs mit törölni!"
+                });
+            }
+        }
+        [HttpGet("count")]
+        public ActionResult<Blog> GetBloggersAmount()
+        {
+            using (var context = new BlogDbContext())
+            {
+                var blogs = context.blog.ToList();
+
+                if (blogs != null)
+                {
+                    return Ok(blogs.Count());
+                }
+
+                return BadRequest(new
+                {
+                    message = "Sikertelen lekérdezés."
+                });
+            }
+
+        }
+        [HttpGet("NameEmail")]
+        public ActionResult<Blog> GetBloggersNameEmail()
+        {
+            using (var context = new BlogDbContext())
+            {
+                var namesEmails = context.blog
+                    .Select(b => new { b.Name, b.Email })
+                    .ToList();
+
+                if (namesEmails != null && namesEmails.Count > 0)
+                {
+                    return Ok(namesEmails);
+                }
+
+                return BadRequest(new
+                {
+                    message = "Sikertelen lekérdezés."
+                });
+            }
+
+        }
+        [HttpGet("oldest")]
+        public ActionResult<Blog> GetOldestBlogger()
+        {
+            using (var context = new BlogDbContext())
+            {
+                var oldest = context.blog
+                    .OrderBy(b => b.RegTime)
+                    .FirstOrDefault();
+
+                if (oldest != null)
+                {
+                    return Ok(new
+                    {
+                        message = "Sikeres lekérdezés",
+                        result = oldest
+                    });
+                }
+
+                return NotFound(new
+                {
+                    message = "Nincsenek blogger adatok."
                 });
             }
         }
