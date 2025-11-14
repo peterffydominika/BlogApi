@@ -83,5 +83,28 @@ namespace blog.Controllers
                 });
             }
         }
+        [HttpDelete]
+        public ActionResult DeleteRecord(int id)
+        {
+            using (var context = new BlogDbContext())
+            {
+                var blogDelete = context.blog.FirstOrDefault(blog => blog.Id == id);
+
+                if (blogDelete != null)
+                {
+                    context.blog.Remove(blogDelete);
+                    context.SaveChanges();
+                    return Ok(new
+                    {
+                        message = "Sikeres törlés."
+                    });
+                }
+
+                return NotFound(new
+                {
+                    meassage = "Nincs mit törölni!"
+                });
+            }
+        }
     }
 }
