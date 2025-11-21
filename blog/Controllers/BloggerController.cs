@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using blog.Models.Dtos;
+using Microsoft.EntityFrameworkCore;
 
 namespace blog.Controllers
 {
@@ -9,24 +10,23 @@ namespace blog.Controllers
     [ApiController]
     public class BloggerController : ControllerBase
     {
-        [HttpPost]
-        public ActionResult<Blog> AddNewRecord(Blog blogger)
+        [HttpPost("AddNewBlogger")]
+        public ActionResult<Blogger> AddNewRecord(AddBloggerDto blogger)
         {
             using (var context = new BlogDbContext())
             {
-                var newBlogger = new Blog
+                var newBlogger = new Blogger
                 {
                     Name = blogger.Name,
                     Email = blogger.Email,
-                    RegTime = blogger.RegTime,
-                    ModTime = blogger.ModTime
+                    Password = blogger.Password
                 };
 
                 if (newBlogger != null)
                 {
                     context.blog.Add(newBlogger);
                     context.SaveChanges();
-                    return StatusCode(201, newBlogger);
+                    return StatusCode(201, new {message = "Sikeres felvitel" , result = newBlogger});
                 }
 
                 return BadRequest(new
@@ -35,8 +35,9 @@ namespace blog.Controllers
                 });
             }
         }
-        [HttpGet]
-        public ActionResult<Blog> GetAllRecord()
+
+        [HttpGet("GetAllBloggers")]
+        public ActionResult<Blogger> GetAllRecord()
         {
             using (var context = new BlogDbContext())
             {
@@ -54,29 +55,7 @@ namespace blog.Controllers
             }
 
         }
-        [HttpGet("byId")]
-        public ActionResult<Blog> GetRecordById(int id)
-        {
-            using (var context = new BlogDbContext())
-            {
-                var blogId = context.blog.FirstOrDefault(blog => blog.Id == id);
-
-                if (blogId != null)
-                {
-                    return Ok(new
-                    {
-                        message = "Sikeres lekérdezés",
-                        result = blogId
-                    });
-                }
-
-                return NotFound(new
-                {
-                    meassage = "Nincs ilyen id!"
-                });
-            }
-
-        }
+        
         [HttpPut]
         public ActionResult PutRecord(int id, UpdateBlogDto updateBlogDto)
         {
@@ -106,6 +85,8 @@ namespace blog.Controllers
                 });
             }
         }
+
+
         [HttpDelete]
         public ActionResult DeleteRecord(int id)
         {
@@ -129,16 +110,95 @@ namespace blog.Controllers
                 });
             }
         }
-        [HttpGet("count")]
-        public ActionResult<Blog> GetBloggersAmount()
+
+
+        [HttpGet("GetBloggersWithPosts")]
+        public ActionResult<Blogger> GetBloggersWithPosts()
         {
             using (var context = new BlogDbContext())
             {
-                var blogs = context.blog.ToList();
-
-                if (blogs != null)
+                var bloggersWithPosts = context.blog.Include(x => x.Posts).ToList();
+                if (bloggersWithPosts != null)
                 {
-                    return Ok(blogs.Count());
+                    return Ok(new
+                    {
+                        message = "Sikeres lekérdezés",
+                        result = bloggersWithPosts
+                    });
+                }
+                return BadRequest(new
+                {
+                    message = "Sikertelen lekérdezés."
+                });
+            }
+        }
+
+
+        [HttpGet("GetBloggerByIdWithPosts")]
+        public ActionResult<Blogger> GetRecordByIdWithPost(int id)
+        {
+            try
+            {
+                using (var context = new BlogDbContext())
+                {
+                    var bloggersWithPosts = context.blog.Include(x => x.Posts).FirstOrDefault(x => x.Id == id);
+                    var blogger = new
+                    {
+                        Name = bloggersWithPosts.Name,
+                        Category = bloggersWithPosts.Posts.Select(x => new { x.Category, x.Description })
+                    };
+                    return Ok(new
+                    {
+                        message = "Sikeres lekérdezés",
+                        result = blogger
+                    });
+                }
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new
+                {
+                    message = "Sikertelen lekérdezés."
+                });
+            }
+        }
+
+
+        [HttpGet("GetBloggerById")]
+        public ActionResult<Blogger> GetRecordById(int id)
+        {
+            using (var context = new BlogDbContext())
+            {
+                var blogId = context.blog.FirstOrDefault(blog => blog.Id == id);
+
+                if (blogId != null)
+                {
+                    return Ok(new
+                    {
+                        message = "Sikeres lekérdezés",
+                        result = blogId
+                    });
+                }
+
+                return NotFound(new
+                {
+                    meassage = "Nincs ilyen id!"
+                });
+            }
+
+        }
+
+
+        [HttpGet("CountBloggers")]
+        public ActionResult<Blogger> GetBloggersAmount()
+        {
+            using (var context = new BlogDbContext())
+            {
+                var bloggers = context.blog.ToList();
+
+                if (bloggers != null)
+                {
+                    return Ok(bloggers.Count());
                 }
 
                 return BadRequest(new
@@ -148,8 +208,10 @@ namespace blog.Controllers
             }
 
         }
+
+
         [HttpGet("NameEmail")]
-        public ActionResult<Blog> GetBloggersNameEmail()
+        public ActionResult<Blogger> GetBloggersNameEmail()
         {
             using (var context = new BlogDbContext())
             {
@@ -169,28 +231,41 @@ namespace blog.Controllers
             }
 
         }
-        [HttpGet("oldest")]
-        public ActionResult<Blog> GetOldestBlogger()
+
+
+        [HttpGet("OldestBlogger")]
+        public ActionResult<Blogger> GetOldestBlogger()
         {
             using (var context = new BlogDbContext())
             {
-                var oldest = context.blog
-                    .OrderBy(b => b.RegTime)
-                    .FirstOrDefault();
+                var oldest = context.blog.OrderBy(b => b.RegTime).FirstOrDefault();
 
                 if (oldest != null)
                 {
-                    return Ok(new
-                    {
-                        message = "Sikeres lekérdezés",
-                        result = oldest
-                    });
+                    return Ok(new { message = "Sikeres lekérdezés", result = oldest });
                 }
+                return NotFound(new { message = "Nincsenek blogger adatok." });
+            }
+        }
 
-                return NotFound(new
+
+        [HttpGet("CountBloggersPosts")]
+        public ActionResult<Blogger> GetBloggersPostsAmount()
+        {
+            try
+            {
+                using (var context = new BlogDbContext())
                 {
-                    message = "Nincsenek blogger adatok."
-                });
+                    var bloggersPostsCount = context.blog.Select(b => new { BloggerId = b.Id, BloggerName = b.Name, PostsCount = b.Posts.Count}).ToList();
+
+                    if (bloggersPostsCount != null && bloggersPostsCount.Count > 0){
+                        return Ok(new { message = "Sikeres lekérdezés", result = bloggersPostsCount });
+                    }
+                    return NotFound(new { message = "Nincsenek blogger adatok." });
+                }
+            }
+            catch (Exception ex){
+                return BadRequest(new { message = "Hiba a lekérdezés során." });
             }
         }
     }

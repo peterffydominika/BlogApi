@@ -12,10 +12,8 @@ namespace blog.Models
         {
         }
 
-        public DbSet<Blog> blog
-        {
-            get;set;
-        }
+        public DbSet<Blogger> blog { get; set; }
+        public DbSet<Post> posts { get; set; }
       
 
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
